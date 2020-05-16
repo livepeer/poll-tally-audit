@@ -100,10 +100,6 @@ const tallyPollAndCheckResult = async (voters) => {
             yes
             no
           }
-          votes {
-            voter
-            choiceID
-          }
         }
       }`,
   });

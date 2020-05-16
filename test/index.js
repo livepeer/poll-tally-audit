@@ -89,6 +89,7 @@ const tallyPollAndCheckResult = async (voters) => {
     }
   }
 
+  spinner.indent = 0;
   spinner.stop();
 
   const table = new Table({

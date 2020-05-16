@@ -1,5 +1,5 @@
 # Livepeer Poll Tally Audit
-
+![](https://user-images.githubusercontent.com/555740/82120474-6245a580-9754-11ea-9866-70574ddc18cb.png)
 ## Instructions
 
 1. Install dependencies

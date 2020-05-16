@@ -1,4 +1,4 @@
-# Livepeer Poll Audit
+# Livepeer Poll Tally Audit
 
 ## Instructions
 

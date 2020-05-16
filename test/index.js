@@ -43,10 +43,10 @@ let spinner;
 const getStake = async (addr) => {
   const currentRound = await RoundsManager.methods
     .currentRound()
-    .call({}, isActive ? "latest" : endBlock);
+    .call({}, isActive ? latestBlockNumber : endBlock);
   return await BondingManager.methods
     .pendingStake(addr, currentRound)
-    .call({}, isActive ? "latest" : endBlock);
+    .call({}, isActive ? latestBlockNumber : endBlock);
 };
 
 const tallyPollAndCheckResult = async (voters) => {
@@ -61,7 +61,7 @@ const tallyPollAndCheckResult = async (voters) => {
       if (voters[voter].registeredTranscoder) {
         let delegatorData = await BondingManager.methods
           .getDelegator(voter)
-          .call({}, isActive ? "latest" : endBlock);
+          .call({}, isActive ? latestBlockNumber : endBlock);
 
         voteStake = delegatorData.delegatedAmount;
 
@@ -177,14 +177,14 @@ describe("Livepeer Poll Tally Audit\n", function () {
 
       let transcoderStatus = await BondingManager.methods
         .transcoderStatus(vote.voter)
-        .call({}, isActive ? "latest" : endBlock);
+        .call({}, isActive ? latestBlockNumber : endBlock);
 
       if (transcoderStatus === "1") {
         voters[vote.voter].registeredTranscoder = true;
       } else {
         let delegator = await BondingManager.methods
           .getDelegator(vote.voter)
-          .call({}, isActive ? "latest" : endBlock);
+          .call({}, isActive ? latestBlockNumber : endBlock);
 
         voters[vote.voter].registeredTranscoder = false;
 

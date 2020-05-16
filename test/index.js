@@ -37,7 +37,6 @@ const fetchSubgraph = createApolloFetch({
 let isActive = false;
 let endBlock;
 let latestBlockNumber;
-let subgraphPollData;
 let spinner;
 
 const getStake = async (addr) => {
@@ -75,13 +74,13 @@ const tallyPollAndCheckResult = async (voters) => {
         }
       }
 
-      if (voters[voter].choiceID == 0) {
+      if (voters[voter].choiceID === "0") {
         yesTally = new web3.utils.BN(yesTally)
           .add(new web3.utils.BN(voteStake).sub(nonVoteStake))
           .toString(10);
       }
 
-      if (voters[voter].choiceID == 1) {
+      if (voters[voter].choiceID === "1") {
         noTally = new web3.utils.BN(noTally)
           .add(new web3.utils.BN(voteStake).sub(nonVoteStake))
           .toString(10);
@@ -91,6 +90,23 @@ const tallyPollAndCheckResult = async (voters) => {
 
   spinner.indent = 0;
   spinner.stop();
+
+  let subgraphPollData = await fetchSubgraph({
+    query: `{
+        poll(block: {number: ${isActive ? latestBlockNumber : endBlock}} id: "${
+      process.env.POLL_ADDRESS
+    }") {
+          tally {
+            yes
+            no
+          }
+          votes {
+            voter
+            choiceID
+          }
+        }
+      }`,
+  });
 
   const table = new Table({
     style: { head: ["cyan"] },
@@ -147,58 +163,55 @@ describe("Livepeer Poll Tally Audit\n", function () {
     // If running audit while poll is active, make sure to get poll tally 10 blocks
     // prior to latest in case the subgraph is in the middle of running updates
     latestBlockNumber = latestBlockNumber - 10;
-
-    subgraphPollData = await fetchSubgraph({
-      query: `{
-        poll(block: {number: ${isActive ? latestBlockNumber : endBlock}} id: "${
-        process.env.POLL_ADDRESS
-      }") {
-          tally {
-            yes
-            no
-          }
-          votes {
-            voter
-            choiceID
-            registeredTranscoder
-          }
-        }
-      }`,
-    });
   });
 
   it("subgraph correctly tallies poll", async () => {
     let voters = {};
-    for (const vote of subgraphPollData.data.poll.votes) {
-      voters[vote.voter] = {
-        choiceID: vote.choiceID === "Yes" ? 0 : 1,
+
+    let votes = await Poll.getPastEvents("Vote", {
+      fromBlock: 0,
+      toBlock: isActive ? latestBlockNumber : endBlock,
+    });
+
+    for (const vote of votes) {
+      const { voter: voterAddress, choiceID } = vote.returnValues;
+      let voter = voterAddress.toLowerCase();
+
+      voters[voter] = {
+        choiceID,
         overrides: [],
-        ...voters[vote.voter],
+        ...voters[voter],
       };
 
       let transcoderStatus = await BondingManager.methods
-        .transcoderStatus(vote.voter)
+        .transcoderStatus(voter)
         .call({}, isActive ? latestBlockNumber : endBlock);
 
       if (transcoderStatus === "1") {
-        voters[vote.voter].registeredTranscoder = true;
+        voters[voter].registeredTranscoder = true;
       } else {
         let delegator = await BondingManager.methods
-          .getDelegator(vote.voter)
+          .getDelegator(voter)
           .call({}, isActive ? latestBlockNumber : endBlock);
 
-        voters[vote.voter].registeredTranscoder = false;
+        voters[voter].registeredTranscoder = false;
 
         if (
           typeof voters[delegator.delegateAddress.toLowerCase()] === "undefined"
         ) {
           voters[delegator.delegateAddress.toLowerCase()] = {
-            overrides: [vote.voter],
+            overrides: [voter],
           };
         } else {
-          voters[delegator.delegateAddress.toLowerCase()].overrides.push(
-            vote.voter
-          );
+          if (
+            voters[delegator.delegateAddress.toLowerCase()].overrides.indexOf(
+              voter
+            ) === -1
+          ) {
+            voters[delegator.delegateAddress.toLowerCase()].overrides.push(
+              voter
+            );
+          }
         }
       }
     }

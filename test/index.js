@@ -15,7 +15,7 @@ const bondingManagerAddress = "0x511bc4556d823ae99630ae8de28b9b80df90ea2e";
 
 const web3 = new Web3(process.env.WEB3_PROVIDER);
 
-const defaults = { gas: 10000000 };
+const defaults = { gas: 1300000000000000000 };
 
 const RoundsManager = new web3.eth.Contract(
   RoundsManagerABI,
@@ -40,12 +40,16 @@ let latestBlockNumber;
 let spinner;
 
 const getStake = async (addr) => {
-  const currentRound = await RoundsManager.methods
-    .currentRound()
-    .call({}, isActive ? latestBlockNumber : endBlock);
-  return await BondingManager.methods
-    .pendingStake(addr, currentRound)
-    .call({}, isActive ? latestBlockNumber : endBlock);
+  try {
+    const currentRound = await RoundsManager.methods
+      .currentRound()
+      .call({}, isActive ? latestBlockNumber : endBlock);
+    return await BondingManager.methods
+      .pendingStake(addr, currentRound)
+      .call({}, isActive ? latestBlockNumber : endBlock);
+  } catch (e) {
+    console.log(e);
+  }
 };
 
 const tallyPollAndCheckResult = async (voters) => {
